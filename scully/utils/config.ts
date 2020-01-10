@@ -32,7 +32,7 @@ const loadIt = async () => {
     distFolder = angularConfig.projects[defaultProject].architect.build.options.outputPath;
   } catch (e) {
     logError(`Angular config file could not be parsed!`, e);
-    process.exit(0);
+    process.exit(15);
   }
 
   // TODO: update types in interfacesandenums to force correct types in here.
@@ -41,10 +41,11 @@ const loadIt = async () => {
     scullyConfig,
     {
       homeFolder: angularRoot,
-      outFolder: join(angularRoot, './dist/static/'),
+      outDir: join(angularRoot, './dist/static/'),
       distFolder,
       appPort: /** 1864 */ 'herodevs'.split('').reduce((sum, token) => (sum += token.charCodeAt(0)), 1000),
       staticport: /** 1771 */ 'scully'.split('').reduce((sum, token) => (sum += token.charCodeAt(0)), 1000),
+      defaultPostRenderers: [],
     }
     // compiledConfig
   ) as ScullyConfig;
@@ -56,12 +57,10 @@ export const loadConfig = loadIt();
 export const updateScullyConfig = async (config: Partial<ScullyConfig>) => {
   /** note, an invalid config will abort the entire program. */
   const newConfig = Object.assign({}, scullyConfig, config);
-  if (config.outFolder === undefined) {
-    logWarn(
-      `The option outFolder isn't configured, using default folder "${yellow(scullyConfig.outFolder)}".`
-    );
+  if (config.outDir === undefined) {
+    logWarn(`The option outDir isn't configured, using default folder "${yellow(scullyConfig.outDir)}".`);
   } else {
-    config.outFolder = join(angularRoot, config.outFolder);
+    config.outDir = join(angularRoot, config.outDir);
   }
   const validatedConfig = await validateConfig(newConfig as ScullyConfig);
   if (validatedConfig) {

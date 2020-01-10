@@ -48,13 +48,13 @@ export const puppeteerRender = async (route: HandledRoute): Promise<string> => {
      * with the `.toString` that evalutate uses
      */
     pageHtml = await page.evaluate(`(async () => {
-      return document.documentElement.outerHTML
+      return new XMLSerializer().serializeToString(document.doctype) + document.documentElement.outerHTML
     })()`);
     await page.close();
   } catch (err) {
     // tslint:disable-next-line: no-unused-expression
     page && typeof page.close === 'function' && (await page.close());
-    logError(`Puppeteer error while rendering "${yellow(route.route)}"`);
+    logError(`Puppeteer error while rendering "${yellow(route.route)}"`, err);
   }
 
   return pageHtml;

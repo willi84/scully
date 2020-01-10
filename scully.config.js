@@ -1,7 +1,7 @@
 /** load the plugin  */
-const {extraRoutesPlugin} = require('./extraPlugin/extra-plugin.js');
-/** register the plugin */
-registerPlugin('router', 'extra', extraRoutesPlugin);
+require('./extraPlugin/extra-plugin.js');
+require('./extraPlugin/tocPlugin');
+require('./extraPlugin/voidPlugin');
 
 exports.config = {
   /** projectRoot is mandatory! */
@@ -48,6 +48,23 @@ exports.config = {
         property: 'id',
       },
     },
+    '/todos/:todoId': {
+      // Type is mandatory
+      type: 'json',
+      /**
+       * Every parameter in the route must exist here
+       */
+      todoId: {
+        url: 'https://jsonplaceholder.typicode.com/todos',
+        property: 'id',
+        /**
+         * Headers can be sent optionally
+         */
+        headers: {
+          'API-KEY': '0123456789',
+        },
+      },
+    },
     '/nouser/:userId/:posts/:comments': {
       // Type is mandatory
       type: 'json',
@@ -69,9 +86,13 @@ exports.config = {
     },
     '/blog/:slug': {
       type: 'contentFolder',
+      postRenderers: ['toc'],
       slug: {
         folder: './blog',
       },
+    },
+    '/**': {
+      type: 'void',
     },
   },
 };

@@ -4,10 +4,10 @@ import {RouteTypeJson} from '../utils/interfacesandenums';
 import {logError, yellow} from '../utils/log';
 import {routeSplit} from '../utils/routeSplit';
 import {HandledRoute} from './addOptionalRoutesPlugin';
-import {deepGet} from './deepGet';
+import {deepGet} from '../utils/deepGet';
 import {renderTemplate} from './renderTemplate';
 
-const jsonRoutePlugin = async (route: string, conf: RouteTypeJson): Promise<HandledRoute[]> => {
+export const jsonRoutePlugin = async (route: string, conf: RouteTypeJson): Promise<HandledRoute[]> => {
   try {
     const {params, createPath} = routeSplit(route);
     // const params = parts.filter(p => p.startsWith(':')).map(id => id.slice(1));
@@ -23,9 +23,17 @@ const jsonRoutePlugin = async (route: string, conf: RouteTypeJson): Promise<Hand
     const loadData = (param, context = {}): Promise<any[]> => {
       /** us es-template lie string to construct the url */
       const url = renderTemplate(conf[param.part].url, context);
-      return httpGetJson(url).then((rawData: any) =>
-        rawData.map(row => deepGet(conf[param.part].property, row))
-      );
+      return httpGetJson(url, {
+        headers: conf[param.part].headers,
+      })
+        .then(rawData =>
+          conf[param.part].resultsHandler ? conf[param.part].resultsHandler(rawData) : rawData
+        )
+        .then((rawData: any) =>
+          conf[param.part].property === undefined
+            ? rawData
+            : rawData.map(row => deepGet(conf[param.part].property, row))
+        );
     };
 
     const routes = await params.reduce(async (total, param, col) => {
@@ -59,8 +67,8 @@ const jsonRoutePlugin = async (route: string, conf: RouteTypeJson): Promise<Hand
 };
 
 // TODO actual validation of the config
-jsonRoutePlugin[configValidator] = async (conf) => {
-  const {params} = routeSplit(conf.path)
+jsonRoutePlugin[configValidator] = async conf => {
+  const {params} = routeSplit(conf.path);
   // return [yellow('all seems ok')];
   return [];
 };

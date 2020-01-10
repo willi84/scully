@@ -7,8 +7,9 @@ import {join} from 'path';
 import * as yargs from 'yargs';
 import './pluginManagement/systemPlugins';
 import {routeContentRenderer} from './renderPlugins/routeContentRenderer';
-import {angularRoot, loadConfig} from './utils/config';
+import {loadConfig} from './utils/config';
 import {checkChangeAngular, existDistAngular, moveDistAngular} from './utils/fsAngular';
+import {checkStaticFolder} from './utils/fsFolder';
 import {httpGetJson} from './utils/httpGetJson';
 import {RouteTypes, ScullyConfig} from './utils/interfacesandenums';
 import {isPortTaken} from './utils/isPortTaken';
@@ -16,9 +17,6 @@ import {logError} from './utils/log';
 import {startScully} from './utils/startup';
 import {closeExpress, staticServer} from './utils/staticServer';
 import {waitForServerToBeAvailable} from './utils/waitForServerToBeAvailable';
-import {checkStaticFolder} from './utils/fsFolder';
-import * as os from 'os';
-import {readFileSync, writeFileSync} from 'fs';
 
 /** the default of 10 is too shallow for generating pages. */
 require('events').defaultMaxListeners = 100;
@@ -59,10 +57,10 @@ let _options = {};
     const folder = join(scullyConfig.homeFolder, scullyConfig.distFolder);
 
     if (!existDistAngular(scullyConfig.homeFolder)) {
-      process.exit(0);
+      process.exit(15);
     }
 
-    await moveDistAngular(folder, scullyConfig.outFolder, {removeStaticDist: true, reset: false});
+    await moveDistAngular(folder, scullyConfig.outDir, {removeStaticDist: true, reset: false});
 
     if (options.path && options.type) {
       routeContentRenderer({
@@ -83,13 +81,13 @@ let _options = {};
           if (+err > 0) {
             spawn(
               'node',
-              [join(scullyConfig.homeFolder, './node_modules/@scullyio/scully/bin/scully.js'), 'serve'],
+              [join(scullyConfig.homeFolder, './node_modules/@scullyio/scully/scully.js'), 'serve'],
               {
                 detached: true,
               }
             ).on('close', err2 => {
               if (+err2 > 0) {
-                spawn('node', [join(scullyConfig.homeFolder, '/scully/bin/scully'), 'serve'], {
+                spawn('node', [join(scullyConfig.homeFolder, '/dist/scully/scully'), 'serve'], {
                   detached: true,
                 });
               }
@@ -105,8 +103,9 @@ let _options = {};
 
       if (!(await waitForServerToBeAvailable().catch(e => false))) {
         logError('Could not connect to server');
-        process.exit(0);
+        process.exit(15);
       }
+
       console.log('servers available');
       await startScully();
 
@@ -125,7 +124,7 @@ let _options = {};
   }
 })();
 
-// TODO : we need rewrite this to observables for dont have memory leaks
+// TODO : we need rewrite this to observables for don't have memory leaks
 async function watchMode() {
   await checkStaticFolder();
   // g for generate and the q for quit
@@ -142,9 +141,7 @@ export function checkForManualRestart() {
 
   readline.question(`Press g for manual regenerate, or q for close the server. \n`, command => {
     if (command.toLowerCase() === 'g') {
-      startScully().then(
-        () => checkForManualRestart()
-      );
+      startScully().then(() => checkForManualRestart());
     } else if (command.toLowerCase() === 'q') {
       readline.close();
       process.exit(0);
@@ -179,5 +176,5 @@ export async function isBuildThere(config: ScullyConfig) {
     return true;
   }
   logError(`Angular distribution files not found, run "ng build" first`);
-  process.exit(0);
+  process.exit(15);
 }

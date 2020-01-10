@@ -1,16 +1,43 @@
-import { Tree } from '@angular-devkit/schematics';
-import { SchematicTestRunner } from '@angular-devkit/schematics/testing';
+import {HostTree} from '@angular-devkit/schematics';
+import {SchematicTestRunner, UnitTestTree} from '@angular-devkit/schematics/testing';
+import {getFileContent} from '@schematics/angular/utility/test';
 import * as path from 'path';
 
+import {setupProject} from '../utils/test-utils';
+import {Schema} from './schema';
 
 const collectionPath = path.join(__dirname, '../collection.json');
+const PACKAGE_JSON_PATH = '/package.json';
+const SCULLY_PATH = '/scully.config.js';
 
+describe('scully schematic', () => {
+  const schematicRunner = new SchematicTestRunner('scully-schematics', collectionPath);
+  const project = 'foo';
+  const defaultOptions: Schema = {
+    project: 'foo',
+  };
+  let appTree: UnitTestTree;
 
-describe('scully', () => {
-  it('works', () => {
-    const runner = new SchematicTestRunner('schematics', collectionPath);
-    const tree = runner.runSchematic('scully', {}, Tree.empty());
+  beforeEach(async () => {
+    appTree = new UnitTestTree(new HostTree());
+    appTree = await setupProject(appTree, schematicRunner, project);
+  });
 
-    expect(tree.files).toEqual([]);
+  describe('when using the default options', () => {
+    beforeEach(async () => {
+      appTree = await schematicRunner.runSchematicAsync('scully', defaultOptions, appTree).toPromise();
+    });
+
+    it('add config file', () => {
+      expect(appTree.files).toContain(SCULLY_PATH);
+    });
+
+    it(`should modify the 'package.json'`, () => {
+      const packageJson = JSON.parse(getFileContent(appTree, PACKAGE_JSON_PATH));
+      const {scripts} = packageJson;
+      expect(appTree.files).toContain(PACKAGE_JSON_PATH);
+      expect(scripts.scully).toEqual('scully');
+      expect(scripts['scully:serve']).toEqual('scully serve');
+    });
   });
 });
